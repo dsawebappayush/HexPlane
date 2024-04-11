@@ -159,10 +159,10 @@ class DNerfDataset(Dataset):
 
         w, h = self.meta["w"],self.meta["h"]
         self.focal = (
-            self.meta["f1_x"]
+            self.meta["fl_x"]
         )  # original focal length
         self.focal1=(
-             self.meta["f1_y"]
+             self.meta["fl_y"]
         )
         self.focal *= (
             self.img_wh[0] / 3008
