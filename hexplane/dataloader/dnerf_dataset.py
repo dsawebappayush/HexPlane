@@ -69,14 +69,15 @@ class DNerfDataset(Dataset):
         scene_bbox_max=[1.0, 1.0, 1.0],
         N_random_pose=1000,
     ):
+        
         self.root_dir = datadir
-        self.split = split
+        self.split = ""
         self.downsample = downsample
-        self.img_wh = (int(800 / downsample), int(800 / downsample))
+        self.img_wh = (int(3008 / downsample), int(2000 / downsample))
         self.is_stack = is_stack
         self.N_vis = N_vis  # evaluate images for every N_vis images
 
-        self.time_scale = time_scale
+        self.time_scale = 0.0
         self.world_bound_scale = 1.1
 
         self.near = 2.0
@@ -156,23 +157,28 @@ class DNerfDataset(Dataset):
         with open(os.path.join(self.root_dir, f"transforms_{self.split}.json")) as f:
             self.meta = json.load(f)
 
-        w, h = self.img_wh
+        w, h = self.meta["w"],self.meta["h"]
         self.focal = (
-            0.5 * 800 / np.tan(0.5 * self.meta["camera_angle_x"])
+            self.meta["f1_x"]
         )  # original focal length
+        self.focal1=(
+             self.meta["f1_y"]
+        )
         self.focal *= (
-            self.img_wh[0] / 800
+            self.img_wh[0] / 3008
         )  # modify focal length to match size self.img_wh
-
+        self.focal1 *= (
+            self.img_wh[1] / 2000
+        )  # modify focal length to match size self.img_wh
         # ray directions for all pixels, same for all images (same H, W, focal)
         self.directions = get_ray_directions_blender(
-            h, w, [self.focal, self.focal]
+            h, w, [self.focal1, self.focal]
         )  # (h, w, 3)
         self.directions = self.directions / torch.norm(
             self.directions, dim=-1, keepdim=True
         )
         self.intrinsics = torch.tensor(
-            [[self.focal, 0, w / 2], [0, self.focal, h / 2], [0, 0, 1]]
+            [[self.focal1, 0, w / 2], [0, self.focal, h / 2], [0, 0, 1]]
         ).float()
 
         self.image_paths = []
@@ -194,7 +200,7 @@ class DNerfDataset(Dataset):
             c2w = torch.FloatTensor(pose)
             self.poses += [c2w]
 
-            image_path = os.path.join(self.root_dir, f"{frame['file_path']}.png")
+            image_path = os.path.join(self.root_dir, f"{frame['file_path']}")
             self.image_paths += [image_path]
             img = Image.open(image_path)
 
@@ -210,9 +216,7 @@ class DNerfDataset(Dataset):
             rays_o, rays_d = get_rays(self.directions, c2w)  # Get rays, both (h*w, 3).
             self.all_rays += [torch.cat([rays_o, rays_d], 1)]  # (h*w, 6)
             cur_time = torch.tensor(
-                frame["time"]
-                if "time" in frame
-                else float(i) / (len(self.meta["frames"]) - 1)
+               0.0 #did this to make all time equal can try making time equal to index
             ).expand(rays_o.shape[0], 1)
             self.all_times += [cur_time]
 
