@@ -154,7 +154,7 @@ class DNerfDataset(Dataset):
         return depth
 
     def read_meta(self):
-        with open(os.path.join(self.root_dir, f"transforms_{self.split}.json")) as f:
+        with open(os.path.join(self.root_dir, f"transforms{self.split}.json")) as f:
             self.meta = json.load(f)
 
         w, h = self.meta["w"],self.meta["h"]
